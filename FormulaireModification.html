@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        body { font-family: sans-serif; margin: 10px; background-color: #f0f2f5; color: #333; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 2px; font-weight: bold; font-size: 0.9em; }
+        /* Style des inputs */
+        input[type="text"], input[type="number"], select, textarea { 
+            width: 100%; 
+            padding: 10px 8px; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        input:focus, select:focus, textarea:focus { border-color: #2196F3; box-shadow: 0 0 5px rgba(33, 150, 243, 0.5); outline: none; }
+        
+        /* Styles Datalist / Input List */
+        input[list] { background-color: #ffffff; }
+        
+        button { color: white; padding: 10px 15px; margin: 6px 0; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 1em; }
+        .btn-search { background-color: #4CAF50; }
+        .btn-save { background-color: #2196F3; }
+        .btn-cancel { background-color: #f44336; }
+        .btn-print { color: white; padding: 10px 15px; margin: 6px 0; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 1em; background-color: #ADD8E6; }
+        .btn-delete { background-color: #f44336; }
+        .btn-litige { background-color: #FF5722; }
+        .btn-print-save { background-color: #00A36C; }
+        .btn-save-only { background-color: #4CAF50; }
+        button:hover { opacity: 0.9; }
+        #messageSearch, #messageEdit { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; font-weight: bold; font-size: 0.9em; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6fb; }
+        .instruction-box { padding: 12px; background-color: #f0f8ff; color: #004085; border: 1px solid #b8daff; border-radius: 4px; margin-top: 15px; font-size: 0.9em; }
+        #staticInfo { font-size: 0.9em; padding: 10px; background: #fff; border: 1px solid #eee; margin-bottom: 10px; border-radius: 4px; }
+        hr { border: 0; border-top: 1px solid #ccc; margin: 20px 0; }
+        /* Griser les champs optionnels (Lot et Série) */
+        input[name="lot"], input[name="serie"] { background-color: #f5f5f5; color: #666; }
+        label[for="lot"], label[for="serie"] { color: #666; }
+    </style>
+</head>
+<body>
+
+    <div id="searchPanel">
+        <h3>1. Rechercher la Saisie</h3>
+        <hr>
+        <label for="etiquetteNumSearch">N° d'étiquette :</label>
+        
+        <input list="etiquettesList" id="etiquetteNumSearch" name="etiquetteNumSearch" placeholder="Sélectionnez ou saisissez le N° Etiquette" required>
+        <datalist id="etiquettesList">
+            <? for (var i = 0; i < etiquettesEnCours.length; i++) { ?>
+                <option value="<?= etiquettesEnCours[i] ?>">
+            <? } ?>
+        </datalist>
+         <hr>
+        <button class="btn-search" onclick="searchEtiquette()">Charger</button>
+        <div id="messageSearch"></div>
+    </div>
+
+    <div id="editPanel" style="display:none;">
+        <h3>2. Modifier la Saisie</h3>
+        <hr>
+        <div id="staticInfo">
+            N° : <strong id="displayEtiquetteNum"></strong><br>
+            Date : <span id="displayDateHeure"></span><br>
+            Utilisateur : <span id="displayUtilisateur"></span><br>
+            Version : <strong id="displayVersion"></strong>
+        </div>
+
+        <form id="modificationForm">
+            <input type="hidden" id="hiddenEtiquetteNum" name="etiquetteNum">
+            <input type="hidden" id="hiddenRowNumber" name="rowNumber">
+            <input type="hidden" id="hiddenFormatImpression" name="formatImpression">
+            
+            <div class="form-group">
+                <label for="lieuDepart">Lieu de départ :</label>
+                <select id="lieuDepart" name="lieuDepart" required>
+                    <option value="">Sélectionnez...</option>
+                    <? for (var i = 0; i < lieuxDepart.length; i++) { ?>
+                        <option value="<?= lieuxDepart[i] ?>"><?= lieuxDepart[i] ?></option>
+                    <? } ?>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="Motif">Motif :</label>
+                <select id="Motif" name="Motif" required>
+                    <option value="">Sélectionnez...</option>
+                    <? for (var i = 0; i < TypeOption.length; i++) { ?>
+                        <option value="<?= TypeOption[i] ?>"><?= TypeOption[i] ?></option>
+                    <? } ?>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="lot">Optionnel : N° de lot : </label>
+                <input type="text" id="lot" name="lot">
+            </div>
+
+            <div class="form-group">
+                <label for="serie">Optionnel : N° de série :</label>
+                <input type="text" id="serie" name="serie">
+            </div>
+
+            <div class="form-group">
+                <label for="quantite">Quantité d'unité de manutention :</label>
+                <input type="number" id="quantite" name="quantite" min="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="TypeUnite">Type d'unité de manutention:</label>
+                <select id="TypeUnite" name="TypeUnite" required>
+                    <option value="">Sélectionnez...</option>
+                    <? for (var i = 0; i < ManutentionOptions.length; i++) { ?>
+                        <option value="<?= ManutentionOptions[i] ?>"><?= ManutentionOptions[i] ?></option>
+                    <? } ?>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="lieuDepose">Lieu de dépose :</label>
+                <select id="lieuDepose" name="lieuDepose" required>
+                    <option value="">Sélectionnez...</option>
+                    <? for (var i = 0; i < lieuxDepart.length; i++) { ?>
+                        <option value="<?= lieuxDepart[i] ?>"><?= lieuxDepart[i] ?></option>
+                    <? } ?>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="commentaire">Commentaire :</label>
+          <textarea id="commentaire" name="commentaire" rows="2" maxlength="100"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="litige">Litige ouvert :</label>
+                <select id="litige" name="litige">
+                    <option value="">Conforme</option>
+                    <? for (var i = 0; i < lieuxLitiges.length; i++) { ?>
+                        <option value="<?= lieuxLitiges[i] ?>"><?= lieuxLitiges[i] ?></option>
+                    <? } ?>
+                </select>
+            </div>
+            
+            <hr>
+            
+            <button type="button" class="btn-print btn-save-only" onclick="saveModificationOnly()">1. Modifier (Sauver uniquement)</button>
+            <button type="button" class="btn-print btn-print-save" onclick="saveModificationAndPrint()">2. Modifier et Imprimer</button>
+            <button type="button" class="btn-print btn-litige" onclick="saveLitigeAndPrint()">3. Lever le Litige</button>
+            <button type="button" class="btn-print btn-cancel" onclick="resetForm()">4. Annuler</button>
+        </form>
+        <div id="messageEdit"></div>
+    </div>
+
+<script>
+    var currentSheetName = null; 
+    var rowToEdit = null;
+    
+    // Récupération des variables du serveur (Définies avec VAR pour une portée globale claire)
+    var etiquetteNumToLoad = '<?= etiquetteToLoad ?>'; 
+    var litigeValueToSet = '<?= litigeValueToSet ?>'; 
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Logique de chargement automatique
+        if (etiquetteNumToLoad && etiquetteNumToLoad.trim() !== '' && etiquetteNumToLoad !== 'null') {
+            document.getElementById('etiquetteNumSearch').value = etiquetteNumToLoad;
+            searchEtiquette(); 
+        }
+    });
+
+    function displayMessage(panel, type, html) {
+        const id = (panel === 'search') ? 'messageSearch' : 'messageEdit';
+        const messageDiv = document.getElementById(id);
+        messageDiv.className = type;
+        messageDiv.innerHTML = html;
+        messageDiv.style.display = 'block';
+    }
+
+    function resetForm() {
+        document.getElementById('modificationForm').reset();
+        
+        // Ferme immédiatement l'hôte (bouton Annuler)
+        google.script.host.close();
+    }
+
+    function searchEtiquette() {
+        // Utilise la valeur sélectionnée/tapée dans l'input/datalist
+        const numero = document.getElementById('etiquetteNumSearch').value.trim(); 
+        
+        if (!numero) {
+            displayMessage('search', 'error', 'Veuillez sélectionner ou saisir un numéro d\'étiquette.');
+            return;
+        }
+
+        toggleButtons(true, 'search');
+        displayMessage('search', 'success', `Recherche de l'étiquette ${numero} en cours...`);
+
+        google.script.run
+            .withSuccessHandler(onDataLoaded)
+            .withFailureHandler(onFailure)
+            .getEtiquetteDataForModification(numero);
+    }
+
+    function onDataLoaded(result) {
+        toggleButtons(false, 'search');
+
+        if (!result) {
+            displayMessage('search', 'error', '❌ Numéro non trouvé ou feuille d\'historique vide.');
+            return;
+        }
+        
+        displayMessage('search', 'success', `✅ Étiquette ${result.formData.etiquetteNum} trouvée. Modification possible.`);
+
+        rowToEdit = result.row;
+
+        document.getElementById('displayEtiquetteNum').textContent = result.formData.etiquetteNum;
+        document.getElementById('displayDateHeure').textContent = result.formData.dateHeure;
+        document.getElementById('displayUtilisateur').textContent = result.formData.utilisateur;
+        document.getElementById('displayVersion').textContent = `v${result.formData.version}`;
+
+        // 1. Remplir les champs cachés
+        document.getElementById('hiddenEtiquetteNum').value = result.formData.etiquetteNum;
+        document.getElementById('hiddenRowNumber').value = result.row;
+        document.getElementById('hiddenFormatImpression').value = result.formData.formatImpression;
+
+        // 2. Remplir les champs du formulaire avec les données chargées
+        const form = document.getElementById('modificationForm');
+        for (const key in result.formData) {
+            const element = form.elements[key];
+            if (element) {
+                element.value = result.formData[key];
+            }
+        }
+        
+        // 3. LOGIQUE CRUCIALE: Appliquer l'écrasement du champ Litige UNIQUEMENT si l'instruction de forçage a été passée.
+        if (litigeValueToSet !== 'null') {
+             document.getElementById('litige').value = litigeValueToSet; // Définit la valeur à "" (Conforme)
+        }
+
+
+        document.getElementById('searchPanel').style.display = 'none';
+        document.getElementById('editPanel').style.display = 'block';
+    }
+
+    // NOUVELLE FONCTION: 1. Modifier (Sauvegarder uniquement) -> Ferme le panneau
+    function saveModificationOnly() {
+        const form = document.getElementById('modificationForm');
+        if (!form.checkValidity()) {
+            alert("Veuillez remplir tous les champs obligatoires.");
+            return;
+        }
+
+        toggleButtons(true, 'edit');
+        displayMessage('edit', 'success', 'Sauvegarde des modifications en cours...');
+
+        const formData = getModificationFormData();
+
+        // Appel à la fonction SAVE ONLY
+        google.script.run
+            .withSuccessHandler(endWorkflowAndClose) 
+            .withFailureHandler(onFailure)
+            .saveModificationOnly(formData, rowToEdit);
+    }
+
+    // NOUVELLE FONCTION: 2. Modifier et Imprimer -> Lance le workflow de nettoyage/fermeture
+    function saveModificationAndPrint() {
+        const form = document.getElementById('modificationForm');
+        if (!form.checkValidity()) {
+            alert("Veuillez remplir tous les champs obligatoires.");
+            return;
+        }
+
+        toggleButtons(true, 'edit');
+        displayMessage('edit', 'success', 'Enregistrement et préparation de l\'impression en cours...');
+
+        const formData = getModificationFormData();
+
+        // 1. Sauvegarder la modification dans l'historique
+        google.script.run
+            .withSuccessHandler(onModificationSaved)
+            .withFailureHandler(onFailure)
+            .saveModification(formData, rowToEdit);
+    }
+
+    // NOUVELLE FONCTION: 3. Lever le Litige -> Ferme le panneau
+    function saveLitigeAndPrint() {
+        const form = document.getElementById('modificationForm');
+        if (!form.checkValidity()) {
+            alert("Veuillez remplir tous les champs obligatoires.");
+            return;
+        }
+
+        if (!confirm("ATTENTION : Ceci va régler le litige à 'Conforme' et cocher la case dans la feuille de Suivi. Continuer ?")) {
+            return;
+        }
+
+        toggleButtons(true, 'edit');
+        displayMessage('edit', 'success', 'Règlement du litige et enregistrement en cours...');
+
+        const formData = getModificationFormData();
+        
+        // ÉTAPE CLÉ: Forcer Litige à la valeur "Conforme" (chaîne vide) dans les données envoyées
+        formData.litige = ""; 
+
+        // Appel de la fonction spéciale de Litige
+        google.script.run
+            .withSuccessHandler(endWorkflowAndClose) // Fermeture après succès
+            .withFailureHandler(onFailure)
+            .processerLitigeAndSave(formData, rowToEdit);
+    }
+    
+    // Handler de succès pour la sauvegarde Litige et Sauvegarde simple
+    function endWorkflowAndClose(result) {
+        displayMessage('edit', 'success', `✅ ${result.message}`);
+        
+        // Ferme le panneau après un court délai pour que l'utilisateur voie le message
+         
+            setTimeout(() => google.script.host.close(), 1000);  
+            google.script.run.showMenuPrincipal(); 
+    }
+
+
+    function onModificationSaved(result) {
+        // Fonction de succès après toute sauvegarde qui doit imprimer
+        if (result.success) {
+            displayMessage('edit', 'success', `✅ ${result.message}. Préparation de l'impression...`);
+
+            const etiquetteNum = result.etiquetteNum; 
+            
+            google.script.run
+                .withSuccessHandler(onPrintSuccess)
+                .withFailureHandler(onPrintFailure)
+                .reimprimerParNumero(etiquetteNum);
+        } else {
+            toggleButtons(false, 'edit');
+            displayMessage('edit', 'error', `❌ ${result.message}`);
+        }
+    }
+
+    function onPrintSuccess(result) {
+         // Passer au panneau de suppression
+         if (result.success && result.sheetName) {
+            // Mettre à jour l'état pour la suppression
+            currentSheetName = result.sheetName;
+            
+            // Construire le nouveau contenu du panneau de nettoyage
+            const instructionPanelHtml = `
+                <h3>✅ Étiquette Imprimée</h3>
+                <div class="instruction-box">
+                <p>Sélectionnez une cellule sur l'étiquette<br /><br /> Cliquez sur <span style="font-weight:bold;">CTRL + P</span> pour imprimer.<br /><br /><br />Le document <strong id="sheetNameDisplayFinal">${result.sheetName}</strong> est actif.</p>
+              
+                </div>
+                <h3 style="margin-top:20px;">Nettoyage</h3>
+                <p>Cliquez pour supprimer la feuille temporaire :</p>
+                <button type="button" class="btn-print btn-delete" onclick="handleDeleteFromPrint()">Supprimer et Nouvelle Recherche</button>
+                <div id="deleteMessageFinal" class="success" style="margin-top: 10px;"></div>
+            `;
+
+            // Remplacer le contenu du panneau d'édition par les instructions de nettoyage
+            const editPanel = document.getElementById('editPanel');
+            editPanel.innerHTML = instructionPanelHtml;
+            editPanel.style.display = 'block';
+            
+         } else {
+            // Erreur lors de l'impression (modèle manquant, etc.)
+            toggleButtons(false, 'edit');
+            displayMessage('edit', 'error', `❌ Impression échouée. Veuillez vérifier le modèle. ${result.message}`);
+         }
+    }
+
+    function onPrintFailure(error) {
+        toggleButtons(false, 'edit');
+        displayMessage('edit', 'error', `❌ Erreur critique lors de la réimpression: ${error.message}`);
+    }
+
+    function handleDeleteFromPrint() {
+        if (!currentSheetName) return;
+
+        const deleteMsgDiv = document.getElementById('deleteMessageFinal');
+        deleteMsgDiv.className = 'success';
+        deleteMsgDiv.innerHTML = 'Suppression en cours...';
+        
+        document.querySelector('#editPanel .btn-delete').disabled = true;
+
+        google.script.run
+            .withSuccessHandler(onDeleteSuccessFromPrint)
+            .withFailureHandler(onDeleteFailureFromPrint)
+            .deleteSheetByName(currentSheetName);
+    }
+    
+    function onDeleteSuccessFromPrint(deleteMessage) {
+        document.getElementById('deleteMessageFinal').innerHTML = '✅ ' + deleteMessage;
+        
+        // Ferme la sidebar (le serveur a déjà activé la feuille Suivi)
+        setTimeout(() => google.script.host.close(), 1000);  
+        google.script.run.showMenuPrincipal(); 
+    }
+
+    function onDeleteFailureFromPrint(error) {
+        document.getElementById('deleteMessageFinal').className = 'error';
+        document.getElementById('deleteMessageFinal').innerHTML = '❌ Erreur de suppression: ' + error.message;
+    }
+    
+    function getModificationFormData() {
+        const formData = {};
+        const elements = document.getElementById('modificationForm').elements;
+        for (const element of elements) {
+            if (element.name) {
+                formData[element.name] = (element.name === 'quantite') ? parseFloat(element.value) : element.value;
+            }
+        }
+        return formData;
+    }
+
+    function onFailure(error) {
+        toggleButtons(false, 'search');
+        toggleButtons(false, 'edit');
+        displayMessage('search', 'error', `❌ Erreur: ${error.message}`);
+    }
+    
+    function toggleButtons(disable, panel) {
+        const selector = (panel === 'search') ? '#searchPanel button' : '#editPanel button';
+        document.querySelectorAll(selector).forEach(button => {
+            button.disabled = disable;
+        });
+    }
+</script>
