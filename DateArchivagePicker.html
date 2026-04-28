@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: sans-serif; padding: 20px; background-color: #f0f2f5; }
+    label { display: block; margin-bottom: 10px; font-weight: bold; }
+    /* Le type="date" offre le calendrier natif du navigateur */
+    input[type="date"] {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #375F9B;
+      color: white;
+      padding: 10px 15px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 1em;
+      transition: background-color 0.3s;
+    }
+    button:hover { background-color: #388E3C; }
+    #message { margin-top: 10px; color: #f44336; font-weight: bold; display: none; }
+  </style>
+</head>
+<body>
+
+  <form id="dateForm">
+    <label for="dateSeuil">Archiver les données CRÉÉES AVANT le :</label>
+    <input type="date" id="dateSeuil" required>
+    
+    <button type="button" onclick="lancerArchivage()">Lancer l'Archivage</button>
+    <h3>
+        <label for="dateSeuil">⚠️Ne lancer que si il n'y a aucun utilisateur actif sur le GSheet⚠️</label>
+
+  </form>
+  
+  <div id="message"></div>
+
+  <script>
+    /**
+     * Définit une date par défaut et s'assure que le calendrier est opérationnel.
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+      const today = new Date();
+      // Propose par défaut une date d'il y a 3 jours pour un archivage réaliste
+      today.setDate(today.getDate() - 3); 
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      document.getElementById('dateSeuil').value = `${yyyy}-${mm}-${dd}`;
+    });
+
+    /**
+     * Récupère la date et appelle la fonction Apps Script côté serveur.
+     */
+    function lancerArchivage() {
+      const dateInput = document.getElementById('dateSeuil');
+      const dateValue = dateInput.value;
+      const messageDiv = document.getElementById('message');
+
+      if (!dateValue) {
+        messageDiv.textContent = 'Veuillez sélectionner une date.';
+        messageDiv.style.display = 'block';
+        return;
+      }
+      
+      // Lancer la fonction Apps Script (triggerArchivageWithDate)
+      google.script.run
+          .withSuccessHandler(google.script.host.close) // Ferme la boîte de dialogue après succès
+          .withFailureHandler(onFailure)
+          .triggerArchivageWithDate(dateValue);
+      
+      // Afficher un message d'attente
+      messageDiv.textContent = 'Archivage en cours... Veuillez patienter.';
+      messageDiv.style.color = '#375F9B';
+      messageDiv.style.display = 'block';
+      document.querySelector('button').disabled = true; // Désactiver le bouton pendant le traitement
+    }
+    
+    /**
+     * Gère les erreurs côté serveur.
+     */
+    function onFailure(error) {
+      document.getElementById('message').textContent = 'Erreur serveur : ' + error.message;
+      document.getElementById('message').style.color = '#f44336';
+      document.querySelector('button').disabled = false;
+    }
+  </script>
+</body>
+</html>
