@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        body { font-family: sans-serif; margin: 10px; background-color: #f0f2f5; color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 3px; font-weight: bold; font-size: 0.9em; }
+        /* Style unifié pour input, list, et textarea */
+        input[type="text"], textarea, select { 
+            width: 100%; 
+            padding: 10px 8px; 
+            box-sizing: border-box; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus { border-color: #4CAF50; box-shadow: 0 0 5px rgba(76, 175, 80, 0.6); outline: none; }
+
+        button { color: white; padding: 10px 15px; margin-top: 10px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 1em; background-color: #375F9B; }
+        button:hover { background-color: #388E3C; }
+        
+        #message { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; font-weight: bold; font-size: 0.9em; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6fb; }
+    </style>
+</head>
+<body>
+
+    <h3>Contrôle de la Dépose</h3>
+    <p>Vérifiez que l'étiquette est déposée au bon endroit pour la marquer comme Livrée.</p>
+    <hr>
+    
+    <form id="deposeForm">
+        
+        <div class="form-group">
+            <label for="etiquetteNum">N° d'étiquette :</label>
+            <input list="etiquettesList" id="etiquetteNum" name="etiquetteNum" placeholder="Sélectionnez ou saisissez l'étiquette" required>
+            <datalist id="etiquettesList">
+                <? for (var i = 0; i < etiquettesEnCours.length; i++) { ?>
+                    <option value="<?= etiquettesEnCours[i] ?>">
+                <? } ?>
+            </datalist>
+        </div>
+        
+        <div class="form-group">
+            <label for="gareDepose">Gare de Dépose (Lieu actuel) :</label>
+            <input id="gareDepose" name="gareDepose" placeholder="Sélectionnez ou saisissez la gare" required>
+            <datalist id="lieuxDeposeConnusList">
+                <? for (var i = 0; i < lieuxDeposeConnus.length; i++) { ?>
+                    <option value="<?= lieuxDeposeConnus[i] ?>">
+                <? } ?>
+            </datalist>
+        </div>
+
+        <div class="form-group">
+            <label for="commentaireNavette">Commentaire Navette (Optionnel) :</label>
+            <textarea id="commentaireNavette" name="commentaireNavette" rows="2"></textarea>
+        </div>
+
+        <button type="button" onclick="validerDepose()">Valider la Dépose et Livrer</button>
+    </form>
+
+    <div id="message"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('deposeForm').addEventListener('keydown', (event) => {
+                // Ne fonctionne pas correctement sur tous les navigateurs avec un datalist
+                // On laisse Enter lancer la fonction sur le dernier input
+                if (event.key === 'Enter') {
+                    event.preventDefault(); 
+                    validerDepose(); 
+                }
+            });
+        });
+        
+        function validerDepose() {
+            const form = document.getElementById('deposeForm');
+            const messageDiv = document.getElementById('message');
+
+            if (!form.checkValidity()) {
+                messageDiv.className = 'error';
+                messageDiv.innerHTML = '❌ Veuillez remplir tous les champs obligatoires.';
+                messageDiv.style.display = 'block';
+                return;
+            }
+
+            const formData = {
+                etiquetteNum: document.getElementById('etiquetteNum').value.trim(),
+                gareDepose: document.getElementById('gareDepose').value.trim(),
+                commentaireNavette: document.getElementById('commentaireNavette').value.trim()
+            };
+            
+            // Désactiver le bouton pendant le traitement
+            document.querySelector('button').disabled = true;
+            messageDiv.className = 'success';
+            messageDiv.innerHTML = 'Validation en cours...';
+            messageDiv.style.display = 'block';
+
+            google.script.run
+                .withSuccessHandler(onSuccess)
+                .withFailureHandler(onFailure)
+                .controlerDeposeEtLivrer(formData);
+        }
+
+        function onSuccess(result) {
+            const messageDiv = document.getElementById('message');
+            document.querySelector('button').disabled = false;
+
+            if (result.success) {
+                messageDiv.className = 'success';
+                messageDiv.innerHTML = `✅ ${result.message}`;
+                
+                // Nettoyer le formulaire après succès
+                document.getElementById('deposeForm').reset();
+                
+                 // Ferme la sidebar (le serveur a déjà activé la feuille Suivi)
+        setTimeout(() => google.script.host.close(), 1000);  
+        google.script.run.showMenuPrincipal(); 
+            } else {
+                messageDiv.className = 'error';
+                messageDiv.innerHTML = `❌ ${result.message}`;
+            }
+        }
+
+        function onFailure(error) {
+            const messageDiv = document.getElementById('message');
+            document.querySelector('button').disabled = false;
+            messageDiv.className = 'error';
+            messageDiv.innerHTML = `❌ Erreur serveur: ${error.message}`;
+        }
+    </script>
+</body>
+</html>
