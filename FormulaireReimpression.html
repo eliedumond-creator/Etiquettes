@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+     <style>
+        body { font-family: sans-serif; margin: 10px; background-color: #f0f2f5; color: #333; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        input:focus { border-color: #2196F3; box-shadow: 0 0 5px rgba(33, 150, 243, 0.5); outline: none; }
+        button { background-color: #375F9B; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 0.9em; margin-bottom: 10px;}
+        .btn-delete { background-color: #f44336; }
+        button:hover { opacity: 0.9; }
+        #message, #deleteMessage { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; font-weight: bold; font-size: 0.9em; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6fb; }
+        .instruction-box { padding: 12px; background-color: #f0f8ff; color: #004085; border: 1px solid #b8daff; border-radius: 4px; margin-top: 15px; font-size: 0.9em; }
+        hr { border: 0; border-top: 1px solid #ccc; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    
+    <div id="recherchePanel">
+        <h3>Sélectionnez une étiquette à ré-imprimer : </h3>
+        <hr>
+        <label for="etiquetteNum">N° d'étiquette :</label>
+        
+        <input list="etiquettesList" id="etiquetteNum" name="etiquetteNum" placeholder="Sélectionnez ou saisissez le N° Etiquette" required>
+        <datalist id="etiquettesList">
+            <? for (var i = 0; i < etiquettesEnCours.length; i++) { ?>
+                <option value="<?= etiquettesEnCours[i] ?>">
+            <? } ?>
+        </datalist>
+         <hr>
+        <button onclick="reimprimer()">Réimprimer</button>
+        <div id="message"></div>
+    </div>
+
+    <div id="instructionPanel" style="display:none;">
+        <h3 id="instructionTitle" style="color:#155724;">✅ Étiquette créée</h3>
+        
+        <div class="instruction-box">
+            <p>Sélectionnez une cellule sur l'étiquette<br /><br /> Cliquez sur <span style="font-weight:bold;">CTRL + P</span> pour imprimer.<br /><br /><br />Le document <strong id="sheetNameDisplay"></strong> est actif.</p>
+        </div>
+        
+        <h3 style="margin-top:20px;">Nettoyage</h3>
+        <p>Une fois l'impression terminée, cliquez pour supprimer la feuille temporaire :</p>
+        
+        <button type="button" class="btn-delete" onclick="handleDelete()">Supprimer et Nouvelle Recherche</button>
+        
+        <div id="deleteMessage"></div>
+    </div>
+
+    <script>
+        let currentSheetName = null;
+        
+        function reimprimer() {
+            // Lit la valeur de l'input (qu'elle soit tapée ou sélectionnée)
+            const numero = document.getElementById('etiquetteNum').value.trim(); 
+            const messageDiv = document.getElementById('message');
+            messageDiv.style.display = 'block';
+            
+            if (!numero) {
+                messageDiv.className = 'error';
+                messageDiv.innerHTML = 'Veuillez saisir ou sélectionner un numéro.';
+                return;
+            }
+            
+            toggleButtons(true, 'search');
+            messageDiv.className = 'success';
+            messageDiv.innerHTML = `Recherche de l'étiquette ${numero} en cours...`;
+
+            google.script.run
+                .withSuccessHandler(onSuccess)
+                .withFailureHandler(onFailure)
+                .reimprimerParNumero(numero);
+        }
+
+        function onSuccess(result) {
+            toggleButtons(false, 'search');
+            document.getElementById('message').style.display = 'none';
+
+            if (result.success && result.sheetName) {
+                currentSheetName = result.sheetName;
+                
+                document.getElementById('instructionTitle').textContent = `✅ Étiquette créée`;
+                document.getElementById('sheetNameDisplay').textContent = result.sheetName;
+                
+                document.getElementById('recherchePanel').style.display = 'none';
+                document.getElementById('instructionPanel').style.display = 'block';
+                
+                const deleteMsgDiv = document.getElementById('deleteMessage');
+                deleteMsgDiv.className = 'success';
+                deleteMsgDiv.innerHTML = result.message;
+                deleteMsgDiv.style.display = 'block';
+
+            } else {
+                const messageDiv = document.getElementById('message');
+                messageDiv.className = 'error';
+                messageDiv.innerHTML = `❌ ${result.message}`;
+                messageDiv.style.display = 'block';
+            }
+        }
+
+        function onFailure(error) {
+            toggleButtons(false, 'search');
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = 'error';
+            messageDiv.innerHTML = `❌ Erreur du serveur : ${error.message}`;
+            messageDiv.style.display = 'block';
+        }
+        
+        // --- LOGIQUE DE SUPPRESSION ---
+        function handleDelete() {
+            if (!currentSheetName) return;
+            
+            toggleButtons(true, 'delete');
+
+            const deleteMsgDiv = document.getElementById('deleteMessage');
+            deleteMsgDiv.className = 'success';
+            deleteMsgDiv.innerHTML = 'Suppression en cours...';
+            
+            google.script.run
+                .withSuccessHandler(onDeleteSuccess)
+                .withFailureHandler(onDeleteFailure)
+                .deleteSheetByName(currentSheetName);
+        }
+
+        function onDeleteSuccess(deleteMessage) {
+            document.getElementById('deleteMessage').className = 'success';
+            document.getElementById('deleteMessage').innerHTML = '✅ ' + deleteMessage;
+            
+            // Ferme la sidebar après le nettoyage
+            setTimeout(() => google.script.host.close(), 1000); 
+            google.script.run.showMenuPrincipal(); 
+            
+
+        }
+
+        function onDeleteFailure(error) {
+            toggleButtons(false, 'delete');
+            const deleteMsgDiv = document.getElementById('deleteMessage');
+            deleteMsgDiv.className = 'error';
+            deleteMsgDiv.innerHTML = '❌ Erreur de suppression: ' + error.message;
+        }
+
+        // --- UTILITAIRE BOUTONS ---
+        function toggleButtons(disable, panelType) {
+            const selector = (panelType === 'search') ? '#recherchePanel button' : '#instructionPanel button';
+            document.querySelectorAll(selector).forEach(button => {
+                button.disabled = disable;
+            });
+        }
+    </script>
+</body>
+</html>
